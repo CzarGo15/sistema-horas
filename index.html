@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema ASIPONA Cocina - Cloud Security</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+        body { font-family: "Inter", sans-serif; }
+        .section-content { display: none; }
+        .section-content.active { display: block; }
+        .modal { display: none; }
+        .modal.active { display: flex; }
+        .nav-btn svg { width: 1.25rem; height: 1.25rem; margin-right: 0.75rem; flex-shrink: 0; }
+        input[type="time"]::-webkit-calendar-picker-indicator { cursor: pointer; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .loading-overlay { display: none; }
+        .loading-overlay.active { display: flex; }
+        #loginScreen { display: flex; position: fixed; inset: 0; background: #1e293b; z-index: 9999; align-items: center; justify-content: center; transition: all 0.5s ease; }
+        #loginScreen.hidden { opacity: 0; pointer-events: none; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <!-- PANTALLA DE ACCESO SEGURIDAD -->
+    <div id="loginScreen">
+        <div class="bg-white p-10 rounded-[3rem] shadow-2xl w-full max-w-sm text-center border-4 border-slate-200">
+            <div class="mb-6">
+                <div class="bg-slate-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-200">
+                    <svg class="w-10 h-10 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                </div>
+                <h2 class="text-2xl font-black text-slate-800 tracking-tighter uppercase italic text-center">Acceso Privado</h2>
+                <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1 text-center">Control de Personal ASIPONA</p>
+            </div>
+            <div class="space-y-4">
+                <input type="password" id="accessKeyInput" placeholder="Clave de Seguridad" class="w-full p-4 bg-gray-50 border-2 border-slate-100 rounded-2xl outline-none focus:border-indigo-500 text-center font-black text-lg transition-all shadow-inner">
+                <button id="loginBtn" class="w-full bg-slate-800 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl hover:bg-slate-900 transition-all text-center">Entrar al Sistema</button>
+                <p id="loginError" class="text-red-500 text-[9px] font-black uppercase hidden text-center">Clave incorrecta.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex h-screen overflow-hidden">
+        <aside class="w-64 bg-white shadow-2xl flex flex-col border-r border-gray-100 z-20">
+            <div class="p-6 border-b border-gray-200 text-center">
+                <h1 class="text-3xl font-black text-indigo-700 tracking-tighter italic">ASIPONA</h1>
+                <p class="text-[9px] text-gray-400 uppercase font-black tracking-[0.2em] mt-1">Control Cloud V4.1</p>
+            </div>
+            <nav id="sidebarNav" class="flex-1 p-4 space-y-6 mt-4 overflow-y-auto font-bold uppercase">
+                <div class="space-y-1"><button data-tab="dashboard" class="nav-btn active group flex items-center w-full px-4 py-3 rounded-2xl text-sm bg-indigo-600 text-white shadow-lg transition-all text-left">Dashboard</button></div>
+                <div class="space-y-1"><button data-tab="time-entry" class="nav-btn group flex items-center w-full px-4 py-3 rounded-2xl text-sm text-gray-500 hover:bg-indigo-50 transition-all text-left">Asistencia</button></div>
+                <div class="space-y-1"><button data-tab="vacations" class="nav-btn group flex items-center w-full px-4 py-3 rounded-2xl text-sm text-gray-500 hover:bg-indigo-50 transition-all text-left">Vacaciones</button></div>
+                <div class="space-y-1"><button data-tab="use-hours" class="nav-btn group flex items-center w-full px-4 py-3 rounded-2xl text-sm text-gray-500 hover:bg-indigo-50 transition-all text-left">Permisos</button></div>
+                <div class="space-y-1"><button data-tab="employees" class="nav-btn group flex items-center w-full px-4 py-3 rounded-2xl text-sm text-gray-500 hover:bg-indigo-50 transition-all text-left">Personal</button></div>
+                <div class="space-y-1"><button data-tab="reports" class="nav-btn group flex items-center w-full px-4 py-3 rounded-2xl text-sm text-gray-500 hover:bg-indigo-50 transition-all text-left">Reportes</button></div>
+                <div class="space-y-1"><button data-tab="data" class="nav-btn group flex items-center w-full px-4 py-3 rounded-2xl text-sm text-gray-500 hover:bg-indigo-50 transition-all text-left text-xs">Base de Datos</button></div>
+            </nav>
+        </aside>
+        
+        <main class="flex-1 overflow-y-auto bg-gray-50 relative p-6 md:p-10 text-center sm:text-left" id="section-content-container">
+            <div id="cloudLoading" class="loading-overlay absolute inset-0 bg-white/80 z-50 flex items-center justify-center backdrop-blur-sm text-center">
+                <div><div class="animate-spin rounded-full h-12 w-12 border-b-4 border-indigo-700 mx-auto"></div><p class="mt-4 text-xs font-black text-indigo-700 tracking-widest animate-pulse uppercase">Sincronizando Cloud...</p></div>
+            </div>
+
+            <!-- 1. DASHBOARD -->
+            <div id="tab-dashboard" class="section-content active space-y-8 uppercase font-bold">
+                <div class="flex justify-between items-end">
+                    <h2 class="text-4xl font-black text-gray-800 tracking-tighter italic text-center">Tablero Cloud</h2>
+                    <div id="holidayAlert" class="hidden px-4 py-1.5 bg-orange-100 text-orange-700 text-[9px] font-black rounded-full border border-orange-200 animate-pulse uppercase">❄️ Horario Decembrino Activo</div>
+                </div>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-center">
+                    <div class="bg-white p-7 rounded-[2.5rem] shadow-sm border-l-8 border-indigo-600"><p class="text-[10px] text-gray-400 mb-3 uppercase">Horas Efectivas</p><p id="totalWorkedHours" class="text-4xl font-black text-indigo-700 tracking-tighter">0.00</p></div>
+                    <div class="bg-white p-7 rounded-[2.5rem] shadow-sm border-l-8 border-blue-600"><p class="text-[10px] text-gray-400 mb-3 uppercase">Saldos Extra</p><p id="totalBalance" class="text-4xl font-black text-blue-700 tracking-tighter">0.00</p></div>
+                    <div class="bg-white p-7 rounded-[2.5rem] shadow-sm border-l-8 border-green-600"><p class="text-[10px] text-gray-400 mb-3 uppercase">Personal</p><p id="activeEmployeesCount" class="text-4xl font-black text-green-600 tracking-tighter">0</p></div>
+                    <div class="bg-white p-7 rounded-[2.5rem] shadow-sm border-l-8 border-orange-500"><p class="text-[10px] text-gray-400 mb-3 uppercase">Vacaciones</p><p id="totalVacationDays" class="text-4xl font-black text-orange-500 tracking-tighter">0</p></div>
+                </div>
+
+                <div class="bg-white rounded-[2.5rem] shadow-sm border overflow-hidden text-center uppercase">
+                    <table class="min-w-full divide-y font-bold uppercase"><thead class="bg-gray-50 text-[10px] text-gray-400 font-black uppercase"><tr><th class="px-8 py-5 text-left">Empleado</th><th class="px-8 py-5">Efectivas</th><th class="px-8 py-5">Extras</th><th class="px-8 py-5">Vac.</th><th class="px-8 py-5 text-right">Estado</th></tr></thead><tbody id="employeeBalanceList" class="divide-y text-sm"></tbody></table>
+                </div>
+            </div>
+
+            <!-- 2. REGISTRO ASISTENCIA -->
+            <div id="tab-time-entry" class="section-content">
+                <div class="max-w-2xl mx-auto"><h2 class="text-3xl font-black text-gray-800 mb-8 text-center uppercase italic text-indigo-700">Entrada Diaria</h2><div class="bg-white p-12 rounded-[3rem] shadow-2xl border font-bold text-center uppercase"><form id="timeEntryForm" class="space-y-8"><div class="grid grid-cols-2 gap-8"><div><label class="block text-[11px] text-gray-400 uppercase mb-3">Trabajador</label><select id="entryEmployee" required class="w-full p-5 bg-gray-50 border-2 rounded-[1.5rem] outline-none text-sm appearance-none"></select></div><div><label class="block text-[11px] text-gray-400 uppercase mb-3 text-center">Tipo de Día</label><select id="dayType" class="w-full p-5 bg-gray-50 border-2 rounded-[1.5rem] outline-none text-sm appearance-none"><option value="normal">Normal</option><option value="descanso">Descanso</option><option value="feriado">Feriado</option></select></div></div><div id="timeInputsContainer" class="grid grid-cols-2 gap-8"><div><label class="block text-[11px] text-gray-400 uppercase mb-3 text-center">Fecha</label><input type="date" id="entryDate" required class="w-full p-5 bg-gray-50 border-2 rounded-[1.5rem] outline-none text-center"></div><div class="grid grid-cols-2 gap-3 text-center"><div><label class="block text-[10px] text-gray-400 mb-3 uppercase">In</label><input type="time" id="checkIn" class="w-full p-5 bg-gray-50 border-2 rounded-[1.5rem] outline-none"></div><div><label class="block text-[10px] text-gray-400 mb-3 uppercase">Out</label><input type="time" id="checkOut" class="w-full p-5 bg-gray-50 border-2 rounded-[1.5rem] outline-none"></div></div></div><div id="dateOnlyContainer" class="hidden text-center"><label class="block text-[11px] text-gray-400 uppercase mb-3 text-center">Fecha de Incidencia</label><input type="date" id="entryDateAlt" class="w-full p-5 bg-gray-50 border-2 rounded-[1.5rem] outline-none text-center"></div><div id="jornadaInfoBox" class="p-6 bg-indigo-50 rounded-[2rem] border border-indigo-100 flex flex-col gap-2 text-center transition-all"><p id="jornadaText" class="text-xs text-indigo-800 font-bold uppercase italic tracking-tighter text-center">Regla: Ventana 30 min comida aplicada.</p><p id="decemberLegend" class="text-[10px] text-red-500 font-black uppercase hidden italic tracking-tighter text-center">⚠️ DICIEMBRE: JORNADA 4 HORAS.</p></div><button type="submit" id="saveEntryBtn" class="w-full bg-indigo-600 text-white py-6 rounded-[2rem] shadow-xl uppercase font-black text-xs text-center">Guardar Cloud</button></form></div></div>
+            </div>
+
+            <!-- 3. VACACIONES -->
+            <div id="tab-vacations" class="section-content text-center uppercase"><h2 class="text-3xl font-black mb-8 italic text-center">Vacaciones</h2><div class="bg-white rounded-[2.5rem] border overflow-hidden"><table class="min-w-full divide-y divide-gray-100 font-bold uppercase text-center"><thead class="bg-gray-50 text-[10px] text-gray-400 font-black uppercase"><tr><th class="px-8 py-5 text-left">Empleado</th><th class="px-8 py-5 text-center">Asignados</th><th class="px-8 py-5 text-center">Gozados</th><th class="px-8 py-5 text-right">Saldo</th></tr></thead><tbody id="vacationManagementList" class="divide-y divide-gray-100"></tbody></table></div></div>
+
+            <!-- 4. PERMISOS -->
+            <div id="tab-use-hours" class="section-content uppercase text-center"><div class="max-w-2xl mx-auto"><h2 class="text-3xl font-black mb-8 italic text-indigo-700 text-center">Ausencias</h2><div class="bg-white p-12 rounded-[3rem] shadow-2xl border text-center"><form id="deductionForm" class="space-y-8 text-center"><div class="text-center"><label class="block text-[11px] text-gray-400 uppercase mb-3">Trabajador</label><select id="deductionEmployee" required class="w-full p-5 bg-gray-50 rounded-[1.5rem] outline-none text-sm appearance-none text-center"></select></div><div class="text-center"><label class="block text-[11px] text-gray-400 uppercase mb-3">Tipo</label><select id="deductionType" required class="w-full p-5 bg-gray-50 rounded-[1.5rem] outline-none text-sm appearance-none text-center"><optgroup label="Descuenta Extras"><option value="hours_discount">Horas</option><option value="medical_discount">Médico (Con Descuento)</option><option value="days_discount">Día Completo</option></optgroup><optgroup label="Justificado"><option value="medical_no_discount">Cita Médica</option><option value="general_no_discount">Permiso Especial</option></optgroup><optgroup label="Bolsa Vacaciones"><option value="vacation">Vacaciones</option></optgroup></select></div><div class="grid grid-cols-2 gap-6 text-center"><div><label class="block text-[11px] text-gray-400 uppercase mb-3">Desde</label><input type="date" id="deductionStartDate" required class="w-full p-5 bg-gray-50 border-none rounded-[1.5rem] outline-none shadow-inner text-center"></div><div id="end-date-container"><label class="block text-[11px] text-gray-400 uppercase mb-3">Hasta</label><input type="date" id="deductionEndDate" required class="w-full p-5 bg-gray-50 border-none rounded-[1.5rem] outline-none shadow-inner text-center"></div></div><div id="hours-input-container" class="hidden text-center"><label class="block text-[11px] text-gray-400 uppercase mb-3">Horas Totales</label><input type="number" id="hoursToDeduct" step="0.5" class="w-full p-5 bg-gray-50 border-none rounded-[1.5rem] outline-none shadow-inner text-center"></div><button type="submit" class="w-full bg-orange-600 text-white py-6 rounded-[2rem] shadow-xl uppercase font-black text-xs text-center">Registrar</button></form></div></div></div>
+
+            <!-- 5. PERSONAL -->
+            <div id="tab-employees" class="section-content space-y-8 uppercase text-center font-bold"><div class="flex justify-between items-center text-center sm:text-left"><h2 class="text-3xl font-black italic text-center">Plantilla</h2><button onclick="document.getElementById('addEmpSection').classList.toggle('hidden')" class="bg-indigo-600 text-white px-8 py-3 rounded-2xl font-black text-xs uppercase text-center">+ Nuevo</button></div><div id="addEmpSection" class="hidden bg-white p-10 rounded-[2.5rem] border max-w-sm mx-auto text-center"><form id="addEmployeeForm" class="space-y-6 text-center text-center"><label class="block text-[10px] text-gray-400 font-black uppercase">Nombre Completo</label><input type="text" id="employeeName" required class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-black text-center text-sm uppercase text-center"><button type="submit" class="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black uppercase text-xs text-center">Registrar Alta</button></form></div><div class="bg-white rounded-[2.5rem] border overflow-hidden text-center"><table class="min-w-full divide-y divide-gray-100 uppercase font-bold text-center"><thead class="bg-gray-50 text-[10px] text-gray-400 font-black uppercase"><tr><th class="px-8 py-5 text-left">Empleado</th><th class="px-8 py-5 text-center">Área</th><th class="px-8 py-5 text-right">Acción</th></tr></thead><tbody id="employeeList" class="divide-y divide-gray-100"></tbody></table></div></div>
+
+            <!-- 6. REPORTES -->
+            <div id="tab-reports" class="section-content space-y-8 text-center uppercase font-bold"><h2 class="text-3xl font-black italic text-center">Historial</h2><div class="bg-white p-8 rounded-[2.5rem] border grid grid-cols-3 gap-8 text-center"><div><label class="block text-[10px] text-gray-400 mb-2 uppercase text-center">Empleado</label><select id="reportEmployee" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm appearance-none text-center text-center"></select></div><div><label class="block text-[10px] text-gray-400 mb-2 uppercase text-center">Mes</label><select id="reportMonthYear" class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm appearance-none text-center text-center"></select></div><div class="flex items-end gap-2 text-center text-center"><button id="generateReportBtn" class="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-black text-xs uppercase text-center">Filtrar</button><button id="exportReportBtn" class="bg-green-600 text-white font-black py-4 px-6 rounded-2xl shadow-xl transition-all text-center"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1.707.293l5.414 5.414a1 1.293.707V19a2 2 0 01-2 2z"></path></svg></button></div></div><div id="reportOutput" class="hidden space-y-10 text-xs text-center"><div class="bg-white rounded-[2.5rem] border overflow-hidden uppercase font-bold text-center"><div class="p-4 bg-indigo-50 flex justify-between px-6 items-center uppercase font-black tracking-widest text-center"><h3 class="text-indigo-700 uppercase text-[10px] text-center">Bitácora Cloud</h3><span id="reportSummary" class="text-indigo-400 text-center"></span></div><div class="overflow-x-auto text-center"><table class="min-w-full divide-y divide-gray-100 uppercase text-center"><thead class="bg-gray-50 text-gray-400 font-black text-[9px] text-center"><tr><th class="px-6 py-4 text-left">Fecha</th><th class="px-6 py-4 text-left">Nombre</th><th class="px-6 py-4 text-center">Horario</th><th class="px-6 py-4 text-center">Efectivas</th><th class="px-6 py-4 text-center">Extras</th><th class="px-6 py-4 text-right">Borrar</th></tr></thead><tbody id="reportHistoryTable" class="divide-y divide-gray-100"></tbody></table></div></div></div></div>
+
+            <!-- 7. DATA -->
+            <div id="tab-data" class="section-content space-y-10 uppercase text-center font-bold"><h2 class="text-3xl font-black italic text-indigo-700 text-center">Sincronización</h2><div class="grid grid-cols-2 gap-10 text-center"><div class="bg-indigo-700 text-white p-10 rounded-[3rem] shadow-2xl flex flex-col justify-between text-center"><h3 class="text-2xl font-black mb-3 italic uppercase text-center">CARGA CSV</h3><form id="importCsvForm" class="space-y-6 text-center"><input type="file" id="csvFiles" accept=".csv" multiple class="block w-full text-xs text-white/50 file:mr-4 file:py-2 file:bg-white file:text-indigo-700 file:font-black file:rounded-xl file:border-0 text-center"><button type="submit" id="csvBtn" class="w-full bg-white text-indigo-800 py-6 rounded-[1.5rem] font-black uppercase text-xs text-center">Subir a la Nube</button></form></div><div class="bg-white p-10 rounded-[3rem] border border-yellow-100 flex flex-col justify-between text-center"><h3 class="text-xl font-black text-indigo-700 mb-3 italic uppercase text-xs text-center">Sincronización Global</h3><p class="text-[9px] text-gray-400 mb-6 uppercase text-center">Actualiza lógica de 30 min a toda la base.</p><button id="recalculateBalancesBtn" class="w-full bg-yellow-500 text-white py-6 rounded-3xl font-black uppercase text-[10px] text-center">Actualizar Nube</button></div></div></div>
+
+        </main>
+    </div>
+
+    <!-- Modal -->
+    <div id="notificationModal" class="modal fixed inset-0 bg-gray-900 bg-opacity-60 items-center justify-center z-[100] p-6 backdrop-blur-sm text-center font-black uppercase text-center">
+        <div class="bg-white p-12 rounded-[3.5rem] shadow-2xl w-full max-w-sm border-gray-100 transition-all text-center">
+            <div id="modalIcon" class="mx-auto mb-8 flex items-center justify-center h-24 w-24 rounded-full text-4xl shadow-inner bg-gray-50 text-indigo-600 text-center">✓</div>
+            <h3 id="modalTitle" class="text-3xl tracking-tighter mb-3 text-center"></h3>
+            <p id="modalMessage" class="text-gray-500 mb-10 text-sm font-bold leading-relaxed text-center"></p>
+            <button id="closeModalBtn" class="w-full bg-gray-900 text-white py-6 rounded-[1.5rem] uppercase tracking-[0.2em] text-[10px] shadow-2xl text-center">Aceptar</button>
+        </div>
+    </div>
+
+    <!-- Script de Firebase (VERSION ACTUALIZADA 11.6.1) -->
+    <script type="importmap">
+    {
+      "imports": {
+        "firebase/app": "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js",
+        "firebase/auth": "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js",
+        "firebase/firestore": "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"
+      }
+    }
+    </script>
+
+    <script type="module">
+        import { initializeApp } from 'firebase/app';
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
+        import { getFirestore, collection, doc, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
+
+        // === CONFIGURACIÓN DE FIREBASE (TU PROYECTO) ===
+        // Usamos la configuración del entorno si está disponible, sino la tuya integrada.
+        const firebaseConfig = {
+          apiKey: "AIzaSyC5o9yQfjtOq33_-bkw4vMi1rSNwn-YzQg",
+          authDomain: "sistema-horas-d494e.firebaseapp.com",
+          projectId: "sistema-horas-d494e",
+          storageBucket: "sistema-horas-d494e.firebasestorage.app",
+          messagingSenderId: "495651805459",
+          appId: "1:495651805459:web:5c2b47a1b6e3a7a19e22e6",
+          measurementId: "G-79KW04H5EE"
+        };
+        // ===============================================
+
+        const CLAVE_ACCESO = "ASIPONA2025";
+        let isAuthorized = sessionStorage.getItem('asipona_auth') === 'true';
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = 'asipona-v4-cloud';
+
+        let employees = [], timeRecords = [], deductions = [], userAuth = null;
+
+        const loginBtn = document.getElementById('loginBtn');
+        const loginInput = document.getElementById('accessKeyInput');
+        const loginScreen = document.getElementById('loginScreen');
+        const loginError = document.getElementById('loginError');
+
+        function checkAuth() { 
+            if (isAuthorized) { 
+                loginScreen.classList.add('hidden'); 
+                initFirebase(); 
+            } 
+        }
+
+        loginBtn.onclick = () => { 
+            if (loginInput.value === CLAVE_ACCESO) { 
+                isAuthorized = true; 
+                sessionStorage.setItem('asipona_auth', 'true'); 
+                loginScreen.classList.add('hidden'); 
+                initFirebase(); 
+            } else { 
+                loginError.classList.remove('hidden'); 
+                loginInput.value = ""; 
+            }
+        };
+
+        loginInput.onkeydown = (e) => { if(e.key === "Enter") loginBtn.click(); };
+
+        // RULE 3: Autenticación ANTES de cualquier operación
+        const initFirebase = async () => {
+            try {
+                // Siempre intentar autenticar primero
+                await signInAnonymously(auth);
+            } catch (error) {
+                console.error("Auth Error:", error);
+                if (error.code === 'auth/configuration-not-found') {
+                    notify("Configuración Faltante", "Debes activar el acceso 'Anónimo' en el panel de Authentication de Firebase Console.", "error");
+                } else {
+                    notify("Error de Nube", "No se pudo conectar. Verifica tu internet o las reglas de Firebase.", "error");
+                }
+            }
+        };
+
+        // Escuchar cambios de estado de autenticación
+        onAuthStateChanged(auth, (u) => {
+            userAuth = u;
+            if (userAuth && isAuthorized) {
+                document.getElementById('cloudLoading').classList.remove('active');
+                startSync();
+            } else if (!userAuth && isAuthorized) {
+                // Si estamos autorizados pero no logueados en Firebase, reintentar
+                initFirebase();
+            }
+        });
+
+        // RULE 1: Rutas de colección estrictas
+        const getColPath = (col) => collection(db, 'artifacts', appId, 'public', 'data', col);
+
+        function startSync() {
+            if (!userAuth) return;
+            
+            // Empleados
+            onSnapshot(getColPath('employees'), 
+                (snap) => { employees = snap.docs.map(d => ({ id: d.id, ...d.data() })); renderUI(); }, 
+                (err) => { console.error("Error empleados:", err); if(err.code === "permission-denied") notify("Error de Permisos", "Verifica las reglas de Firestore (Test Mode).", "error"); }
+            );
+            
+            // Registros
+            onSnapshot(getColPath('timeRecords'), 
+                (snap) => { timeRecords = snap.docs.map(d => ({ id: d.id, ...d.data() })); renderUI(); }, 
+                (err) => console.error("Error registros:", err)
+            );
+            
+            // Deducciones
+            onSnapshot(getColPath('deductions'), 
+                (snap) => { deductions = snap.docs.map(d => ({ id: d.id, ...d.data() })); renderUI(); }, 
+                (err) => console.error("Error deducciones:", err)
+            );
+        }
+
+        // Lógica de Negocio
+        function calculateEffectiveHours(cin, cout, jBase) {
+            if (!cin || !cout || !cin.includes(':')) return 0;
+            const start = new Date(`2000-01-01T${cin}`);
+            const end = new Date(`2000-01-01T${cout}`);
+            let elapsed = (end - start) / (1000 * 60 * 60);
+            if (elapsed < 0) elapsed += 24;
+            if (jBase === 4) return elapsed;
+            if (elapsed >= 8.0 && elapsed <= 8.5) return 8.0;
+            return elapsed > 8.5 ? (elapsed - 0.5) : elapsed;
+        }
+
+        function getRequiredJornada(dateStr, dayType) {
+            if (dayType === 'descanso' || dayType === 'feriado') return 0;
+            const dateObj = new Date(dateStr + "T12:00:00");
+            const startDec = new Date(dateObj.getFullYear() + "-12-16").getTime();
+            const endJan = new Date((dateObj.getFullYear() + 1) + "-01-02").getTime();
+            return (dateObj.getTime() >= startDec || dateObj.getTime() <= endJan) ? 4 : 8;
+        }
+
+        function renderUI() {
+            const active = employees.filter(e => e.active !== false).sort((a,b) => a.name.localeCompare(b.name));
+            ['entryEmployee', 'deductionEmployee', 'reportEmployee'].forEach(id => {
+                const sel = document.getElementById(id); if(!sel) return;
+                const prev = sel.value;
+                sel.innerHTML = id === 'reportEmployee' ? '<option value="all">TODOS</option>' : '<option value="">-- SELECCIONAR --</option>';
+                active.forEach(e => sel.innerHTML += `<option value="${e.id}">${e.name}</option>`);
+                sel.value = prev;
+            });
+
+            const dashTable = document.getElementById('employeeBalanceList');
+            const empTable = document.getElementById('employeeList');
+            const vacTable = document.getElementById('vacationManagementList');
+            if(dashTable) dashTable.innerHTML = ''; if(empTable) empTable.innerHTML = ''; if(vacTable) vacTable.innerHTML = '';
+            
+            let tWorked = 0, tEx = 0, tVac = 0;
+            active.forEach(e => {
+                const b = getBalances(e.id);
+                tWorked += b.totalWorked; tEx += b.over; tVac += b.vacAvail;
+                if(dashTable) dashTable.innerHTML += `<tr class="hover:bg-gray-50"><td class="px-8 py-5 text-left text-[10px] tracking-tighter uppercase font-black">${e.name}</td><td class="px-8 py-5 text-indigo-700 font-black text-center">${b.totalWorked.toFixed(1)}h</td><td class="px-8 py-5 ${b.over >= 0 ? 'text-blue-600' : 'text-red-500'} font-black text-center">${b.over.toFixed(2)}h</td><td class="px-8 py-5 text-center font-black text-orange-500">${b.vacAvail} d</td><td class="px-8 py-5 text-right font-black"><span class="bg-green-100 text-green-700 text-[8px] px-3 py-1 rounded-full uppercase">Activo</span></td></tr>`;
+                if(vacTable) vacTable.innerHTML += `<tr><td class="px-8 py-5 text-left uppercase text-[10px] font-black">${e.name}</td><td class="px-8 py-5 text-center"><input type="number" value="${b.vacAss}" onchange="window.updateVacation('${e.id}', this.value)" class="w-20 p-2 bg-yellow-50 rounded-xl outline-none text-center font-black"></td><td class="px-8 py-5 text-center text-gray-400 font-black text-xs">${b.vacUsed} d</td><td class="px-8 py-5 text-center font-black ${b.vacAvail >= 0 ? 'text-green-600' : 'text-red-600'} text-xl tracking-tighter">${b.vacAvail}</td></tr>`;
+                if(empTable) empTable.innerHTML += `<tr class="hover:bg-gray-50 uppercase font-black"><td class="px-8 py-4 text-left text-[11px]">${e.name}</td><td class="px-8 py-4 text-center text-indigo-400 text-[10px] italic">Cocina</td><td class="px-8 py-4 text-right"><button onclick="window.delEmp('${e.id}')" class="bg-red-50 text-red-600 hover:bg-red-600 hover:text-white px-4 py-2 rounded-xl text-[9px] uppercase shadow-sm font-black transition-all">Baja</button></td></tr>`;
+            });
+            document.getElementById('totalWorkedHours').textContent = tWorked.toFixed(2);
+            document.getElementById('totalBalance').textContent = tEx.toFixed(2);
+            document.getElementById('totalVacationDays').textContent = tVac;
+            document.getElementById('activeEmployeesCount').textContent = active.length;
+        }
+
+        function getBalances(id) {
+            const personal = timeRecords.filter(r => r.empId === id);
+            const totalWorked = personal.reduce((s, r) => s + (parseFloat(r.worked) || 0), 0);
+            const extTotal = personal.reduce((s, r) => s + (parseFloat(r.overtime) || 0), 0);
+            const ded = deductions.filter(d => d.empId === id && d.type !== 'vacation').reduce((s, d) => s + d.value, 0);
+            const vacU = deductions.filter(d => d.empId === id && d.type === 'vacation').reduce((s, d) => s + d.value, 0);
+            const emp = employees.find(e => e.id === id);
+            return { totalWorked, over: extTotal - ded, vacUsed: vacU, vacAvail: (emp?.assignedVacations || 0) - vacU, vacAss: emp?.assignedVacations || 0 };
+        }
+
+        document.getElementById('timeEntryForm').onsubmit = async (e) => {
+            e.preventDefault();
+            if (!userAuth) return;
+            const btn = document.getElementById('saveEntryBtn'); btn.disabled = true;
+            const type = document.getElementById('dayType').value, empId = document.getElementById('entryEmployee').value;
+            const date = type === 'normal' ? document.getElementById('entryDate').value : document.getElementById('entryDateAlt').value;
+            const jBase = getRequiredJornada(date, type);
+            let cin = 'DESC', cout = 'DESC', worked = 0, overtime = 0;
+            if (type === 'normal') { cin = document.getElementById('checkIn').value; cout = document.getElementById('checkOut').value; worked = calculateEffectiveHours(cin, cout, jBase); overtime = Math.max(0, worked - jBase); }
+            await addDoc(getColPath('timeRecords'), { empId, date, cin, cout, worked, overtime, dayType: type });
+            e.target.reset(); btn.disabled = false; notify("Guardado", "Información sincronizada.");
+        };
+
+        window.updateVacation = async (id, val) => { if (!userAuth) return; await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'employees', id), { assignedVacations: parseFloat(val) || 0 }); };
+        window.delEmp = async (id) => { if (!userAuth) return; if(confirm("¿Baja?")) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'employees', id), { active: false }); };
+        window.delRec = async (id) => { if (!userAuth) return; if(confirm("¿Eliminar?")) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'timeRecords', id)); };
+
+        function notify(title, msg) { const modal = document.getElementById('notificationModal'); document.getElementById('modalTitle').textContent = title; document.getElementById('modalMessage').textContent = msg; modal.classList.add('active'); }
+        document.getElementById('closeModalBtn').onclick = () => document.getElementById('notificationModal').classList.remove('active');
+        document.querySelectorAll('.nav-btn').forEach(btn => { btn.onclick = () => { document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active', 'bg-indigo-600', 'text-white')); btn.classList.add('active', 'bg-indigo-600', 'text-white'); document.querySelectorAll('.section-content').forEach(s => s.classList.remove('active')); document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active'); renderUI(); };});
+        
+        window.onload = () => { checkAuth(); };
+    </script>
+</body>
+</html>
