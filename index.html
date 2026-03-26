@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ASIPONA - Cloud V4.9 Debug</title>
+    <title>ASIPONA - Gestión Cloud V5.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
@@ -15,10 +15,7 @@
         .modal.active { display: flex; }
         #loginScreen { display: flex; position: fixed; inset: 0; background: #1e293b; z-index: 9999; align-items: center; justify-content: center; }
         #loginScreen.hidden { display: none; }
-        .status-dot { height: 8px; width: 8px; border-radius: 50%; display: inline-block; margin-right: 8px; }
-        .status-ok { background-color: #10b981; }
-        .status-wait { background-color: #f59e0b; }
-        .status-error { background-color: #ef4444; }
+        input[type="time"]::-webkit-calendar-picker-indicator { cursor: pointer; }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800">
@@ -26,115 +23,106 @@
     <!-- PANTALLA DE ACCESO -->
     <div id="loginScreen">
         <div class="bg-white p-10 rounded-[3rem] shadow-2xl w-full max-w-sm text-center border-4 border-slate-200">
+            <div class="bg-slate-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-200 text-slate-600">
+                <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+            </div>
             <h2 class="text-2xl font-black text-slate-800 tracking-tighter uppercase italic mb-6">Acceso Privado</h2>
             <div class="space-y-4">
                 <input type="password" id="accessKeyInput" placeholder="Clave de Seguridad" class="w-full p-4 bg-gray-50 border-2 border-slate-100 rounded-2xl outline-none focus:border-indigo-500 text-center font-black text-lg">
-                <button id="loginBtn" class="w-full bg-slate-800 text-white py-4 rounded-2xl font-black uppercase text-xs shadow-xl">Entrar al Sistema</button>
+                <button id="loginBtn" class="w-full bg-slate-800 text-white py-4 rounded-2xl font-black uppercase text-xs shadow-xl hover:bg-slate-900 transition-all">Entrar al Sistema</button>
                 <p id="loginError" class="text-red-500 text-[9px] font-black uppercase hidden">Clave incorrecta.</p>
             </div>
         </div>
     </div>
 
-    <!-- PANTALLA DE CARGA Y DIAGNÓSTICO -->
-    <div id="cloudLoading" class="fixed inset-0 bg-white z-[80] flex items-center justify-center p-6 hidden">
-        <div class="max-w-md w-full bg-slate-50 p-8 rounded-[2.5rem] border border-slate-200 shadow-inner">
-            <div class="flex items-center justify-between mb-8">
-                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-                <h3 class="text-xs font-black text-indigo-700 uppercase tracking-widest">Diagnóstico de Nube</h3>
+    <!-- PANTALLA DE CARGA -->
+    <div id="cloudLoading" class="fixed inset-0 bg-white z-[80] flex items-center justify-center hidden backdrop-blur-sm">
+        <div class="text-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-4 border-indigo-700 mx-auto"></div>
+            <p id="loadingText" class="mt-4 text-xs font-black text-indigo-700 tracking-widest uppercase">Conectando a la Nube...</p>
+            <div id="connErrorBox" class="hidden mt-4 p-4 bg-red-50 text-red-600 rounded-xl text-[10px] font-bold border border-red-100 uppercase">
+                <p id="connErrorMsg">Error de permisos.</p>
+                <button onclick="location.reload()" class="mt-2 underline font-black">Reintentar</button>
             </div>
-            
-            <div id="logConsole" class="space-y-4 text-[10px] font-bold uppercase tracking-tight text-slate-500">
-                <div id="log-auth"><span class="status-dot status-wait"></span>Conectando con Authentication...</div>
-                <div id="log-db"><span class="status-dot"></span>Iniciando base de datos Firestore...</div>
-                <div id="log-data"><span class="status-dot"></span>Descargando registros...</div>
-            </div>
-
-            <div id="errorBox" class="hidden mt-8 p-4 bg-red-100 text-red-700 rounded-2xl text-[9px] border border-red-200">
-                <p class="font-black mb-1">DETALLE DEL ERROR:</p>
-                <p id="errorMsg" class="font-mono">---</p>
-            </div>
-
-            <button id="forceStartBtn" class="hidden mt-8 w-full bg-indigo-600 text-white py-4 rounded-2xl font-black uppercase text-[10px] shadow-lg animate-pulse">
-                Forzar Entrada (Modo Primer Uso)
-            </button>
         </div>
     </div>
 
     <div class="flex h-screen overflow-hidden">
+        <!-- Sidebar -->
         <aside class="w-64 bg-white shadow-2xl flex flex-col border-r border-gray-100 z-20">
             <div class="p-6 border-b border-gray-200 text-center">
                 <h1 class="text-3xl font-black text-indigo-700 tracking-tighter italic uppercase">ASIPONA</h1>
-                <p class="text-[9px] text-gray-400 uppercase font-black tracking-widest mt-1">Control Cloud V4.9</p>
+                <p class="text-[9px] text-gray-400 uppercase font-black tracking-widest mt-1">Control Cloud V5.0</p>
             </div>
-            <nav id="sidebarNav" class="flex-1 p-4 space-y-2 mt-4 font-bold uppercase">
-                <button data-tab="dashboard" class="nav-btn active w-full p-3 rounded-xl bg-indigo-600 text-white text-sm text-left">Dashboard</button>
-                <button data-tab="time-entry" class="nav-btn w-full p-3 rounded-xl text-gray-500 hover:bg-gray-50 text-sm text-left">Asistencia</button>
-                <button data-tab="employees" class="nav-btn w-full p-3 rounded-xl text-gray-500 hover:bg-gray-50 text-sm text-left">Personal</button>
-                <button data-tab="reports" class="nav-btn w-full p-3 rounded-xl text-gray-500 hover:bg-gray-50 text-sm text-left">Reportes</button>
+            <nav id="sidebarNav" class="flex-1 p-4 space-y-1 mt-4 overflow-y-auto font-bold uppercase">
+                <button data-tab="dashboard" class="nav-btn active w-full p-3 rounded-xl bg-indigo-600 text-white text-xs text-left mb-1">Dashboard</button>
+                <button data-tab="time-entry" class="nav-btn w-full p-3 rounded-xl text-gray-500 hover:bg-gray-50 text-xs text-left">Asistencia</button>
+                <button data-tab="vacations" class="nav-btn w-full p-3 rounded-xl text-gray-500 hover:bg-gray-50 text-xs text-left">Vacaciones</button>
+                <button data-tab="use-hours" class="nav-btn w-full p-3 rounded-xl text-gray-500 hover:bg-gray-50 text-xs text-left">Permisos</button>
+                <button data-tab="employees" class="nav-btn w-full p-3 rounded-xl text-gray-500 hover:bg-gray-50 text-xs text-left">Personal</button>
+                <button data-tab="reports" class="nav-btn w-full p-3 rounded-xl text-gray-500 hover:bg-gray-50 text-xs text-left">Reportes</button>
+                <button data-tab="data" class="nav-btn w-full p-3 rounded-xl text-gray-500 hover:bg-gray-50 text-xs text-left">Configuración</button>
             </nav>
         </aside>
         
-        <main class="flex-1 overflow-y-auto bg-gray-50 p-10" id="mainContent">
-            <!-- DASHBOARD -->
-            <div id="tab-dashboard" class="section-content active space-y-8 uppercase font-bold">
-                <h2 class="text-4xl font-black text-gray-800 tracking-tighter italic">TABLERO</h2>
-                <div class="grid grid-cols-3 gap-6 text-center">
-                    <div class="bg-white p-6 rounded-3xl shadow-sm border-l-4 border-indigo-600"><p class="text-[10px] text-gray-400">TRABAJADAS</p><p id="totalWorkedHours" class="text-3xl">0.00</p></div>
-                    <div class="bg-white p-6 rounded-3xl shadow-sm border-l-4 border-blue-600"><p class="text-[10px] text-gray-400">EXTRAS</p><p id="totalBalance" class="text-3xl">0.00</p></div>
-                    <div class="bg-white p-6 rounded-3xl shadow-sm border-l-4 border-green-600"><p class="text-[10px] text-gray-400">PERSONAL</p><p id="activeEmployeesCount" class="text-3xl">0</p></div>
+        <main class="flex-1 overflow-y-auto bg-gray-50 p-6 md:p-10" id="mainContent">
+
+            <!-- 1. DASHBOARD -->
+            <div id="tab-dashboard" class="section-content active space-y-8 uppercase font-bold text-center sm:text-left">
+                <div class="flex justify-between items-end">
+                    <h2 class="text-4xl font-black text-gray-800 tracking-tighter italic uppercase">Tablero Global</h2>
+                    <div id="holidayAlert" class="hidden px-4 py-1.5 bg-orange-100 text-orange-700 text-[9px] font-black rounded-full border border-orange-200 animate-pulse">❄️ Horario Especial Activo</div>
                 </div>
-                <div class="bg-white rounded-3xl shadow-sm border overflow-hidden"><table class="min-w-full divide-y"><thead class="bg-gray-50 text-[10px] text-gray-400 uppercase font-black"><tr><th class="px-6 py-4 text-left">Nombre</th><th class="px-6 py-4">Extras</th><th class="px-6 py-4 text-right">Estatus</th></tr></thead><tbody id="employeeBalanceList" class="divide-y text-sm"></tbody></table></div>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-center">
+                    <div class="bg-white p-7 rounded-[2.5rem] shadow-sm border-l-4 border-indigo-600"><p class="text-[10px] text-gray-400 mb-3 uppercase">H. Efectivas</p><p id="totalWorkedHours" class="text-3xl font-black">0.00</p></div>
+                    <div class="bg-white p-7 rounded-[2.5rem] shadow-sm border-l-4 border-blue-600"><p class="text-[10px] text-gray-400 mb-3 uppercase">Extras</p><p id="totalBalance" class="text-3xl font-black">0.00</p></div>
+                    <div class="bg-white p-7 rounded-[2.5rem] shadow-sm border-l-4 border-green-600"><p class="text-[10px] text-gray-400 mb-3 uppercase">Personal</p><p id="activeEmployeesCount" class="text-3xl font-black">0</p></div>
+                    <div class="bg-white p-7 rounded-[2.5rem] shadow-sm border-l-4 border-orange-500"><p class="text-[10px] text-gray-400 mb-3 uppercase">Vacaciones</p><p id="totalVacationDays" class="text-3xl font-black">0</p></div>
+                </div>
+
+                <div class="bg-white rounded-[2.5rem] border overflow-hidden uppercase">
+                    <table class="min-w-full divide-y font-bold text-center"><thead class="bg-gray-50 text-[10px] text-gray-400 font-black uppercase"><tr><th class="px-8 py-5 text-left">Empleado</th><th class="px-8 py-5">Efectivas</th><th class="px-8 py-5">Extras</th><th class="px-8 py-5 text-right">Estatus</th></tr></thead><tbody id="employeeBalanceList" class="divide-y text-sm"></tbody></table>
+                </div>
             </div>
 
-            <!-- PERSONAL -->
-            <div id="tab-employees" class="section-content space-y-6 uppercase font-bold">
-                <div class="bg-white p-8 rounded-3xl shadow-lg border border-slate-200">
-                    <h3 class="text-indigo-700 mb-4">REGISTRAR NUEVO EMPLEADO</h3>
-                    <form id="addEmployeeForm" class="flex gap-4">
-                        <input type="text" id="employeeName" placeholder="NOMBRE COMPLETO" class="flex-1 p-4 bg-gray-50 rounded-2xl outline-none border-2 border-transparent focus:border-indigo-500 uppercase font-black text-sm">
-                        <button type="submit" class="bg-indigo-600 text-white px-8 rounded-2xl font-black text-xs uppercase">CREAR EN NUBE</button>
-                    </form>
-                </div>
-                <div class="bg-white rounded-3xl shadow-sm border overflow-hidden"><table class="min-w-full divide-y font-bold uppercase"><tbody id="employeeList" class="divide-y text-center"></tbody></table></div>
+            <!-- 2. ASISTENCIA -->
+            <div id="tab-time-entry" class="section-content">
+                <div class="max-w-xl mx-auto"><h2 class="text-3xl font-black text-gray-800 mb-8 text-center uppercase italic text-indigo-700">Registro Diario</h2><div class="bg-white p-12 rounded-[3rem] shadow-2xl border font-bold text-center uppercase"><form id="timeEntryForm" class="space-y-8"><div class="grid grid-cols-2 gap-8"><div><label class="block text-[11px] text-gray-400 uppercase mb-3 text-center">Trabajador</label><select id="entryEmployee" required class="w-full p-4 bg-gray-50 border-2 rounded-2xl outline-none appearance-none text-center font-bold"></select></div><div><label class="block text-[11px] text-gray-400 uppercase mb-3 text-center">Día</label><select id="dayType" class="w-full p-4 bg-gray-50 border-2 rounded-2xl outline-none appearance-none text-center font-bold"><option value="normal">Laboral Normal</option><option value="descanso">Descanso</option><option value="feriado">Feriado</option></select></div></div><div class="grid grid-cols-2 gap-8"><div><label class="block text-[11px] text-gray-400 uppercase mb-3 text-center">Fecha</label><input type="date" id="entryDate" required class="w-full p-4 bg-gray-50 border-2 rounded-2xl outline-none text-center font-bold"></div><div class="grid grid-cols-2 gap-3"><div><label class="block text-[10px] text-gray-400 mb-3 uppercase text-center">In</label><input type="time" id="checkIn" class="w-full p-4 bg-gray-50 border-2 rounded-2xl outline-none font-bold"></div><div><label class="block text-[10px] text-gray-400 mb-3 uppercase text-center">Out</label><input type="time" id="checkOut" class="w-full p-4 bg-gray-50 border-2 rounded-2xl outline-none font-bold"></div></div></div><button type="submit" class="w-full bg-indigo-600 text-white py-5 rounded-2xl font-black uppercase text-xs shadow-xl tracking-widest">Sincronizar en Nube</button></form></div></div>
             </div>
 
-            <!-- ASISTENCIA -->
-            <div id="tab-time-entry" class="section-content max-w-md mx-auto">
-                <div class="bg-white p-10 rounded-[3rem] shadow-2xl uppercase font-bold text-center">
-                    <h2 class="text-indigo-700 mb-8 font-black">NUEVA ENTRADA</h2>
-                    <form id="timeEntryForm" class="space-y-6">
-                        <select id="entryEmployee" required class="w-full p-4 bg-gray-50 rounded-xl outline-none font-bold text-sm border-2 border-transparent focus:border-indigo-500"></select>
-                        <input type="date" id="entryDate" required class="w-full p-4 bg-gray-50 rounded-xl outline-none font-bold text-sm">
-                        <div class="grid grid-cols-2 gap-4">
-                            <input type="time" id="checkIn" class="p-4 bg-gray-50 rounded-xl border-none font-bold">
-                            <input type="time" id="checkOut" class="p-4 bg-gray-50 rounded-xl border-none font-bold">
-                        </div>
-                        <button type="submit" class="w-full bg-indigo-600 text-white py-5 rounded-2xl font-black uppercase text-xs">GUARDAR EN NUBE</button>
-                    </form>
-                </div>
-            </div>
+            <!-- 3. VACACIONES -->
+            <div id="tab-vacations" class="section-content uppercase font-bold text-center"><h2 class="text-3xl font-black mb-8 italic uppercase text-center">Control Vacaciones</h2><div class="bg-white rounded-[2.5rem] border overflow-hidden"><table class="min-w-full divide-y text-center uppercase"><thead class="bg-gray-50 text-[10px] text-gray-400 font-black uppercase"><tr><th class="px-8 py-5 text-left">Empleado</th><th class="px-8 py-5">Asignados</th><th class="px-8 py-5">Gozados</th><th class="px-8 py-5 text-right">Saldo</th></tr></thead><tbody id="vacationManagementList" class="divide-y text-sm"></tbody></table></div></div>
+
+            <!-- 4. PERMISOS -->
+            <div id="tab-use-hours" class="section-content uppercase text-center font-bold"><div class="max-w-xl mx-auto"><h2 class="text-3xl font-black mb-8 italic text-indigo-700 text-center uppercase">Ausencias</h2><div class="bg-white p-12 rounded-[3rem] shadow-2xl border text-center"><form id="deductionForm" class="space-y-6"><select id="deductionEmployee" required class="w-full p-4 bg-gray-50 rounded-2xl font-bold"></select><select id="deductionType" required class="w-full p-4 bg-gray-50 rounded-2xl font-bold"><option value="hours_discount">Permiso por Horas</option><option value="medical_discount">Médico (Con Descuento)</option><option value="days_discount">Falta / Día Completo</option><option value="vacation">Día de Vacaciones</option><option value="justified">Permiso Justificado (0h)</option></select><div class="grid grid-cols-2 gap-6"><input type="date" id="deductionStartDate" required class="p-4 bg-gray-50 rounded-2xl font-bold"><input type="date" id="deductionEndDate" required class="p-4 bg-gray-50 rounded-2xl font-bold"></div><input type="number" id="hoursToDeduct" placeholder="Horas (si aplica)" step="0.5" class="w-full p-4 bg-gray-50 rounded-2xl font-bold text-center"><button type="submit" class="w-full bg-orange-600 text-white py-5 rounded-2xl font-black uppercase text-xs shadow-lg">Aplicar Incidencia</button></form></div></div></div>
+
+            <!-- 5. PERSONAL -->
+            <div id="tab-employees" class="section-content space-y-8 uppercase text-center font-bold"><div class="flex justify-between items-center"><h2 class="text-3xl font-black italic uppercase">Plantilla</h2><button onclick="document.getElementById('addEmpSection').classList.toggle('hidden')" class="bg-indigo-600 text-white px-8 py-3 rounded-2xl text-xs uppercase shadow-lg">+ Nuevo</button></div><div id="addEmpSection" class="hidden bg-white p-10 rounded-[2.5rem] border max-w-sm mx-auto shadow-xl"><form id="addEmployeeForm" class="space-y-6"><label class="block text-[10px] text-gray-400 font-black uppercase">Nombre Completo</label><input type="text" id="employeeName" required class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-black text-center text-sm uppercase"><button type="submit" class="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black uppercase text-xs">Guardar Alta</button></form></div><div class="bg-white rounded-[2.5rem] border overflow-hidden"><table class="min-w-full divide-y text-center uppercase font-bold"><thead class="bg-gray-50 text-[10px] text-gray-400 font-black uppercase"><tr><th class="px-8 py-5 text-left">Nombre</th><th class="px-8 py-5 text-center">Área</th><th class="px-8 py-5 text-right">Acción</th></tr></thead><tbody id="employeeList" class="divide-y text-sm"></tbody></table></div></div>
+
+            <!-- 6. REPORTES -->
+            <div id="tab-reports" class="section-content space-y-8 text-center uppercase font-bold"><h2 class="text-3xl font-black italic text-center uppercase">Historial General</h2><div class="bg-white p-6 rounded-[2.5rem] border grid grid-cols-3 gap-6"><div><label class="text-[10px] text-gray-400 mb-1 block">Trabajador</label><select id="reportEmployee" class="w-full p-3 bg-gray-50 rounded-xl font-bold uppercase"></select></div><div><label class="text-[10px] text-gray-400 mb-1 block">Periodo</label><select id="reportMonthYear" class="w-full p-3 bg-gray-50 rounded-xl font-bold uppercase"></select></div><div class="flex items-end"><button id="generateReportBtn" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-black uppercase text-xs shadow-lg">Filtrar</button></div></div><div id="reportOutput" class="hidden bg-white rounded-3xl border overflow-hidden"><table class="min-w-full divide-y text-center"><thead class="bg-gray-50 text-[10px] font-black uppercase"><tr><th class="px-4 py-4 text-left">Fecha</th><th class="px-4 py-4">Horario</th><th class="px-4 py-4">Efectivas</th><th class="px-4 py-4">Extras</th><th class="px-4 py-4 text-right">Acción</th></tr></thead><tbody id="reportHistoryTable" class="divide-y text-xs"></tbody></table></div></div>
+
+            <!-- 7. CONFIGURACIÓN -->
+            <div id="tab-data" class="section-content space-y-10 uppercase text-center font-bold"><h2 class="text-3xl font-black text-indigo-700 text-center uppercase">Administración Nube</h2><div class="grid grid-cols-2 gap-10"> <div class="bg-indigo-700 text-white p-10 rounded-[3rem] shadow-2xl flex flex-col justify-between"><h3 class="text-xl font-black mb-3 italic">Exportar Backup</h3><p class="text-[10px] opacity-70 mb-6">Descarga todos los datos de la nube en formato JSON para respaldo local.</p><button id="exportDataBtn" class="w-full bg-white text-indigo-800 py-5 rounded-2xl font-black uppercase text-xs shadow-2xl">Descargar JSON</button></div><div class="bg-white p-10 rounded-[3rem] border-2 border-indigo-50 flex flex-col justify-between text-center"><h3 class="text-xl font-black text-indigo-700 mb-3 italic">Sincronizar Lógica</h3><p class="text-[9px] text-gray-400 mb-6 uppercase">Aplica la ventana de 30 min y regla de diciembre a toda la base de datos.</p><button id="recalculateBalancesBtn" class="w-full bg-yellow-500 text-white py-5 rounded-2xl font-black uppercase text-xs shadow-md">Actualizar Todo</button></div></div></div>
+
         </main>
     </div>
 
     <!-- Modal Notificaciones -->
-    <div id="notificationModal" class="modal fixed inset-0 bg-gray-900/60 items-center justify-center z-[100] p-6 backdrop-blur-sm">
-        <div class="bg-white p-12 rounded-[3.5rem] shadow-2xl w-full max-w-sm text-center">
-            <h3 id="modalTitle" class="text-3xl font-black uppercase mb-3">✓</h3>
-            <p id="modalMessage" class="text-gray-500 font-bold uppercase text-[10px]"></p>
-            <button id="closeModalBtn" class="w-full bg-slate-900 text-white py-5 rounded-2xl mt-6 font-black uppercase text-xs">Cerrar</button>
-        </div>
-    </div>
+    <div id="notificationModal" class="modal fixed inset-0 bg-gray-900/60 items-center justify-center z-[100] p-6 backdrop-blur-sm"><div class="bg-white p-12 rounded-[3.5rem] shadow-2xl w-full max-w-sm text-center uppercase font-black"><h3 id="modalTitle" class="text-3xl tracking-tighter mb-3">✓</h3><p id="modalMessage" class="text-gray-500 mb-8 text-[10px] font-bold leading-relaxed"></p><button id="closeModalBtn" class="w-full bg-slate-900 text-white py-5 rounded-2xl uppercase tracking-[0.2em] text-[10px] shadow-2xl">Cerrar</button></div></div>
 
     <script type="importmap">{"imports": {"firebase/app": "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js","firebase/auth": "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js","firebase/firestore": "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"}}</script>
 
     <script type="module">
         import { initializeApp } from 'firebase/app';
         import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
-        import { getFirestore, collection, doc, setDoc, addDoc, updateDoc, onSnapshot } from 'firebase/firestore';
+        import { getFirestore, collection, doc, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 
         const firebaseConfig = {
           apiKey: "AIzaSyC5o9yQfjtOq33_-bkw4vMi1rSNwn-YzQg",
           authDomain: "sistema-horas-d494e.firebaseapp.com",
+          databaseURL: "https://sistema-horas-d494e-default-rtdb.firebaseio.com",
           projectId: "sistema-horas-d494e",
           storageBucket: "sistema-horas-d494e.firebasestorage.app",
           messagingSenderId: "495651805459",
@@ -147,49 +135,25 @@
         const db = getFirestore(app);
         const appId = 'sistema-horas-d494e';
 
-        let employees = [], timeRecords = [], userAuth = null;
+        let employees = [], timeRecords = [], deductions = [], userAuth = null;
 
-        // UI Console Helper
-        const log = (id, status, text = null) => {
-            const el = document.getElementById(`log-${id}`);
-            if (!el) return;
-            const dot = el.querySelector('.status-dot');
-            dot.className = `status-dot status-${status}`;
-            if (text) el.innerHTML = `<span class="status-dot status-${status}"></span>${text}`;
-        };
-
-        const showLogin = () => document.getElementById('loginScreen').classList.remove('hidden');
-        const showLoading = () => document.getElementById('cloudLoading').classList.add('active');
-        const hideLoading = () => document.getElementById('cloudLoading').classList.remove('active');
-
-        // LOGIN BTN
+        // --- AUTH ---
         document.getElementById('loginBtn').onclick = () => {
             if (document.getElementById('accessKeyInput').value === CLAVE_ACCESO) {
                 document.getElementById('loginScreen').classList.add('hidden');
                 document.getElementById('cloudLoading').classList.remove('hidden');
-                initConnection();
+                signInAnonymously(auth).catch(err => {
+                    document.getElementById('connErrorBox').classList.remove('hidden');
+                    document.getElementById('connErrorMsg').textContent = "Activa 'Anónimo' en Firebase.";
+                });
             } else {
                 document.getElementById('loginError').classList.remove('hidden');
-            }
-        };
-
-        const initConnection = async () => {
-            try {
-                log('auth', 'wait', 'Iniciando conexión anónima...');
-                await signInAnonymously(auth);
-                log('auth', 'ok', 'Conexión con Google lista.');
-            } catch (err) {
-                console.error(err);
-                log('auth', 'error', 'Error de conexión (Authentication)');
-                document.getElementById('errorBox').classList.remove('hidden');
-                document.getElementById('errorMsg').textContent = err.message;
             }
         };
 
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 userAuth = user;
-                log('db', 'ok', 'Base de datos conectada.');
                 startSync();
             }
         });
@@ -197,92 +161,137 @@
         const getColPath = (col) => collection(db, 'artifacts', appId, 'public', 'data', col);
 
         function startSync() {
-            log('data', 'wait', 'Descargando datos...');
-            
-            // Si en 6 segundos no hay respuesta, mostrar botón de "Forzar"
-            setTimeout(() => {
-                if (!employees.length) document.getElementById('bypassBtn')?.classList.remove('hidden');
-                document.getElementById('forceStartBtn').classList.remove('hidden');
-            }, 6000);
-
             onSnapshot(getColPath('employees'), (snap) => {
                 employees = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                log('data', 'ok', 'Datos recibidos correctamente.');
                 document.getElementById('cloudLoading').classList.add('hidden');
                 renderUI();
             }, (err) => {
-                log('data', 'error', 'Error de permisos (Firestore)');
-                document.getElementById('errorBox').classList.remove('hidden');
-                document.getElementById('errorMsg').textContent = "REGLAS: Debes pegar el código en la pestaña Rules.";
+                document.getElementById('connErrorBox').classList.remove('hidden');
+                document.getElementById('connErrorMsg').textContent = "Error de Permisos. Revisa Firestore Rules.";
             });
 
             onSnapshot(getColPath('timeRecords'), (snap) => {
                 timeRecords = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                 renderUI();
             });
+
+            onSnapshot(getColPath('deductions'), (snap) => {
+                deductions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                renderUI();
+            });
         }
 
-        document.getElementById('forceStartBtn').onclick = () => {
-            document.getElementById('cloudLoading').classList.add('hidden');
-            renderUI();
-        };
+        // --- LÓGICA DE HORAS ---
+        function calculateEffectiveHours(cin, cout, jBase) {
+            if (!cin || !cout || cin === 'DESC' || cin.includes('FER')) return 0;
+            const start = new Date(`2000-01-01T${cin}`);
+            const end = new Date(`2000-01-01T${cout}`);
+            let elapsed = (end - start) / (1000 * 60 * 60);
+            if (elapsed < 0) elapsed += 24;
+            if (jBase === 4) return elapsed;
+            if (elapsed >= 8.0 && elapsed <= 8.5) return 8.0;
+            return elapsed > 8.5 ? (elapsed - 0.5) : elapsed;
+        }
 
+        function getRequiredJornada(dateStr, dayType) {
+            if (dayType === 'descanso' || dayType === 'feriado') return 0;
+            const dateObj = new Date(dateStr + "T12:00:00");
+            const startDec = new Date(dateObj.getFullYear() + "-12-16").getTime();
+            const endJan = new Date((dateObj.getFullYear() + 1) + "-01-02").getTime();
+            return (dateObj.getTime() >= startDec || dateObj.getTime() <= endJan) ? 4 : 8;
+        }
+
+        // --- RENDERIZADO UI ---
         function renderUI() {
             const active = employees.filter(e => e.active !== false).sort((a,b) => a.name.localeCompare(b.name));
-            const select = document.getElementById('entryEmployee');
-            if(select) {
-                select.innerHTML = '<option value="">-- SELECCIONAR --</option>';
-                active.forEach(e => select.innerHTML += `<option value="${e.id}">${e.name}</option>`);
-            }
+            
+            // Selects
+            ['entryEmployee', 'deductionEmployee', 'reportEmployee'].forEach(id => {
+                const s = document.getElementById(id); if(!s) return;
+                const prev = s.value;
+                s.innerHTML = id === 'reportEmployee' ? '<option value="all">TODOS</option>' : '<option value="">-- SELECCIONAR --</option>';
+                active.forEach(e => s.innerHTML += `<option value="${e.id}">${e.name}</option>`);
+                s.value = prev;
+            });
 
-            const balTable = document.getElementById('employeeBalanceList');
-            if(balTable) {
-                balTable.innerHTML = '';
-                active.forEach(e => {
-                    const ext = timeRecords.filter(r => r.empId === e.id).reduce((s,r) => s + (r.overtime || 0), 0);
-                    balTable.innerHTML += `<tr><td class="px-6 py-4 text-left">${e.name}</td><td class="px-6 py-4 text-indigo-700">${ext.toFixed(2)}h</td><td class="px-6 py-4 text-right"><span class="bg-green-100 text-green-700 px-2 py-1 rounded-full text-[8px]">ACTIVO</span></td></tr>`;
-                });
-            }
+            // Tablas
+            const balancesTable = document.getElementById('employeeBalanceList');
+            const personalTable = document.getElementById('employeeList');
+            const vacationTable = document.getElementById('vacationManagementList');
+            
+            if(balancesTable) balancesTable.innerHTML = ''; 
+            if(personalTable) personalTable.innerHTML = '';
+            if(vacationTable) vacationTable.innerHTML = '';
+            
+            let tWorked = 0, tEx = 0, tVac = 0;
+            active.forEach(e => {
+                const b = getBalances(e.id);
+                tWorked += b.totalWorked; tEx += b.over; tVac += b.vacAvail;
+                
+                if(balancesTable) balancesTable.innerHTML += `<tr><td class="px-8 py-4 text-left font-black">${e.name}</td><td class="px-8 py-4 text-indigo-600">${b.totalWorked.toFixed(1)}h</td><td class="px-8 py-4 ${b.over >= 0 ? 'text-blue-600' : 'text-red-500'}">${b.over.toFixed(2)}h</td><td class="px-8 py-4 text-right"><span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-[9px]">VIGENTE</span></td></tr>`;
+                if(personalTable) personalTable.innerHTML += `<tr><td class="px-8 py-4 text-left uppercase">${e.name}</td><td class="px-8 py-4 text-indigo-400 text-[10px]">COCINA</td><td class="px-8 py-4 text-right"><button onclick="window.delEmp('${e.id}')" class="text-red-500 text-[10px] font-black uppercase">Baja</button></td></tr>`;
+                if(vacationTable) vacationTable.innerHTML += `<tr><td class="px-8 py-4 text-left uppercase">${e.name}</td><td class="px-8 py-4 text-center"><input type="number" value="${b.vacAss}" onchange="window.updateVacation('${e.id}', this.value)" class="w-16 p-2 bg-yellow-50 rounded-xl outline-none text-center font-black"></td><td class="px-8 py-4 text-center text-gray-400">${b.vacUsed} d</td><td class="px-8 py-4 text-center font-black ${b.vacAvail >= 0 ? 'text-green-600' : 'text-red-600'} text-xl tracking-tighter">${b.vacAvail}</td></tr>`;
+            });
 
-            const empTable = document.getElementById('employeeList');
-            if(empTable) {
-                empTable.innerHTML = '';
-                active.forEach(e => {
-                    empTable.innerHTML += `<tr><td class="px-6 py-4">${e.name}</td><td class="px-6 py-4"><span class="text-indigo-400">COCINA</span></td><td class="px-6 py-4 text-right"><button onclick="window.delEmp('${e.id}')" class="text-red-500">BAJA</button></td></tr>`;
-                });
-            }
+            document.getElementById('totalWorkedHours').textContent = tWorked.toFixed(2);
+            document.getElementById('totalBalance').textContent = tEx.toFixed(2);
+            document.getElementById('totalVacationDays').textContent = tVac;
             document.getElementById('activeEmployeesCount').textContent = active.length;
         }
 
-        // FORMULARIOS
+        function getBalances(id) {
+            const records = timeRecords.filter(r => r.empId === id);
+            const totalWorked = records.reduce((s, r) => s + (parseFloat(r.worked) || 0), 0);
+            const extTotal = records.reduce((s, r) => s + (parseFloat(r.overtime) || 0), 0);
+            const ded = deductions.filter(d => d.empId === id && d.type !== 'vacation').reduce((s, d) => s + d.value, 0);
+            const vacU = deductions.filter(d => d.empId === id && d.type === 'vacation').reduce((s, d) => s + d.value, 0);
+            const emp = employees.find(e => e.id === id);
+            return { totalWorked, over: extTotal - ded, vacUsed: vacU, vacAvail: (emp?.assignedVacations || 0) - vacU, vacAss: emp?.assignedVacations || 0 };
+        }
+
+        // --- FORMULARIOS ---
         document.getElementById('addEmployeeForm').onsubmit = async (e) => {
             e.preventDefault();
             const name = document.getElementById('employeeName').value.trim().toUpperCase();
-            if(!name) return;
-            await addDoc(getColPath('employees'), { name, active: true });
-            e.target.reset(); notify("ÉXITO", "EMPLEADO REGISTRADO EN NUBE.");
+            await addDoc(getColPath('employees'), { name, active: true, assignedVacations: 0 });
+            e.target.reset(); notify("Guardado", "Personal registrado en nube.");
         };
 
         document.getElementById('timeEntryForm').onsubmit = async (e) => {
             e.preventDefault();
-            const empId = document.getElementById('entryEmployee').value;
+            const type = document.getElementById('dayType').value, empId = document.getElementById('entryEmployee').value;
             const date = document.getElementById('entryDate').value;
-            const cin = document.getElementById('checkIn').value;
-            const cout = document.getElementById('checkOut').value;
-            
-            // Lógica ventana 30 min
-            const start = new Date(`2000-01-01T${cin}`);
-            const end = new Date(`2000-01-01T${cout}`);
-            let hours = (end - start) / (1000 * 60 * 60);
-            if(hours < 0) hours += 24;
-            let worked = (hours >= 8 && hours <= 8.5) ? 8 : (hours > 8.5 ? hours - 0.5 : hours);
-            let overtime = Math.max(0, worked - 8);
-
-            await addDoc(getColPath('timeRecords'), { empId, date, cin, cout, worked, overtime });
-            e.target.reset(); notify("GUARDADO", "ASISTENCIA SUBIDA A LA NUBE.");
+            const jBase = getRequiredJornada(date, type);
+            let cin = 'DESC', cout = 'DESC', worked = 0, overtime = 0;
+            if (type === 'normal') {
+                cin = document.getElementById('checkIn').value; cout = document.getElementById('checkOut').value;
+                worked = calculateEffectiveHours(cin, cout, jBase);
+                overtime = Math.max(0, worked - jBase);
+            }
+            await addDoc(getColPath('timeRecords'), { empId, date, cin, cout, worked, overtime, dayType: type });
+            e.target.reset(); notify("Éxito", "Asistencia sincronizada.");
         };
 
-        window.delEmp = async (id) => { if(confirm("¿DAR DE BAJA?")) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'employees', id), { active: false }); };
+        document.getElementById('deductionForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const type = document.getElementById('deductionType').value, empId = document.getElementById('deductionEmployee').value;
+            const sDate = document.getElementById('deductionStartDate').value;
+            const val = type === 'vacation' ? 1 : (parseFloat(document.getElementById('hoursToDeduct').value) || 8);
+            await addDoc(getColPath('deductions'), { empId, type, date: sDate, value: val });
+            e.target.reset(); notify("Registrado", "Incidencia aplicada.");
+        };
+
+        document.getElementById('exportDataBtn').onclick = () => {
+            const data = { employees, timeRecords, deductions };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = `ASIPONA_CLOUD_BACKUP.json`; a.click();
+        };
+
+        // --- GLOBALES ---
+        window.updateVacation = async (id, val) => { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'employees', id), { assignedVacations: parseFloat(val) || 0 }); };
+        window.delEmp = async (id) => { if(confirm("¿Baja definitiva?")) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'employees', id), { active: false }); };
+        window.delRec = async (id) => { if(confirm("¿Borrar?")) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'timeRecords', id)); };
 
         function notify(title, msg) {
             document.getElementById('modalTitle').textContent = title;
@@ -293,17 +302,19 @@
 
         document.querySelectorAll('.nav-btn').forEach(btn => {
             btn.onclick = () => {
-                document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('bg-indigo-600', 'text-white'));
-                btn.classList.add('bg-indigo-600', 'text-white');
+                document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active', 'bg-indigo-600', 'text-white'));
+                btn.classList.add('active', 'bg-indigo-600', 'text-white');
                 document.querySelectorAll('.section-content').forEach(s => s.classList.remove('active'));
                 document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+                renderUI();
             };
         });
 
         window.onload = () => { 
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('entryDate').value = today;
-            showLogin(); 
+            document.getElementById('deductionStartDate').value = today;
+            document.getElementById('deductionEndDate').value = today;
         };
     </script>
 </body>
