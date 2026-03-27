@@ -90,7 +90,7 @@
             <div id="tab-vacations" class="section-content text-center"><h2 class="text-3xl font-black mb-8 italic uppercase text-center">Control Vacaciones</h2><div class="bg-white rounded-[2.5rem] border overflow-hidden"><table class="min-w-full divide-y text-center"><thead class="bg-gray-50 text-[10px] text-gray-400 font-black"><tr><th class="px-8 py-5 text-left">Empleado</th><th class="px-8 py-5 text-center">Asignados</th><th class="px-8 py-5 text-center">Tomados</th><th class="px-8 py-5 text-right">Saldo</th></tr></thead><tbody id="vacationManagementList" class="divide-y text-sm text-center"></tbody></table></div></div>
 
             <!-- PERMISOS -->
-            <div id="tab-use-hours" class="section-content text-center"><div class="max-w-xl mx-auto"><h2 class="text-3xl font-black mb-8 italic text-indigo-700 text-center tracking-tighter">Ausencias</h2><div class="bg-white p-12 rounded-[3rem] shadow-2xl border text-center font-bold"><form id="deductionForm" class="space-y-6"><select id="deductionEmployee" required class="w-full p-4 bg-gray-50 rounded-2xl font-bold shadow-inner"></select><select id="deductionType" required class="w-full p-4 bg-gray-50 rounded-2xl font-bold shadow-inner"><option value="hours_discount">Permiso por Horas</option><option value="medical_discount">Médico (Con Descuento)</option><option value="days_discount">Falta / Día Completo</option><option value="vacation">Día de Vacaciones</option><option value="justified">Justificado (0h)</option></select><div class="grid grid-cols-2 gap-6"><input type="date" id="deductionStartDate" required class="p-4 bg-gray-50 rounded-2xl font-bold shadow-inner"><input type="date" id="deductionEndDate" required class="p-4 bg-gray-50 rounded-2xl font-bold shadow-inner"></div><input type="number" id="hoursToDeduct" placeholder="Horas totales (si aplica)" step="0.5" class="w-full p-4 bg-gray-50 rounded-2xl font-bold text-center shadow-inner"><button type="submit" class="w-full bg-orange-600 text-white py-5 rounded-2xl font-black uppercase text-xs shadow-lg tracking-widest shadow-orange-200">Registrar en Nube</button></form></div></div></div>
+            <div id="tab-use-hours" class="section-content text-center"><div class="max-w-xl mx-auto"><h2 class="text-3xl font-black mb-8 italic text-indigo-700 text-center tracking-tighter">Ausencias</h2><div class="bg-white p-12 rounded-[3rem] shadow-2xl border text-center font-bold"><form id="deductionForm" class="space-y-6"><select id="deductionEmployee" required class="w-full p-4 bg-gray-50 rounded-2xl font-bold shadow-inner"></select><select id="deductionType" required class="w-full p-4 bg-gray-50 rounded-2xl font-bold shadow-inner"><option value="hours_discount">Permiso por Horas</option><option value="medical_discount">Médico (Con Descuento Horas)</option><option value="days_discount">Falta / Permiso (Días Completos)</option><option value="vacation">Día(s) de Vacaciones</option><option value="justified">Justificado (0h)</option></select><div class="grid grid-cols-2 gap-6"><div><label class="block text-[10px] text-gray-400 mb-1 text-left uppercase">A partir del:</label><input type="date" id="deductionStartDate" required class="w-full p-4 bg-gray-50 rounded-2xl font-bold shadow-inner text-center"></div><div><label id="labelDeductionAmt" class="block text-[10px] text-gray-400 mb-1 text-left uppercase">Cantidad (Horas):</label><input type="number" id="hoursToDeduct" required placeholder="Ej: 3" step="0.5" min="0.5" class="w-full p-4 bg-gray-50 rounded-2xl font-bold text-center shadow-inner"></div></div><div id="datePreviewBox" class="hidden p-4 bg-indigo-50 rounded-2xl border border-indigo-100 text-center"><p id="datePreviewText" class="text-[11px] text-indigo-800 font-black italic tracking-tighter">Termina el: --</p></div><button type="submit" class="w-full bg-orange-600 text-white py-5 rounded-2xl font-black uppercase text-xs shadow-lg tracking-widest shadow-orange-200">Registrar en Nube</button></form></div></div></div>
 
             <!-- PERSONAL -->
             <div id="tab-employees" class="section-content space-y-8 text-center"><div class="flex justify-between items-center"><h2 class="text-3xl font-black italic uppercase">Plantilla</h2><button id="showAddEmpBtn" class="bg-indigo-600 text-white px-8 py-3 rounded-2xl font-black text-xs uppercase shadow-lg">+ Nuevo</button></div><div id="addEmpSection" class="hidden bg-white p-10 rounded-[2.5rem] border max-w-sm mx-auto shadow-xl"><form id="addEmployeeForm" class="space-y-6"><label class="block text-[10px] text-gray-400 font-black uppercase">Nombre Completo</label><input type="text" id="employeeName" required class="w-full p-4 bg-gray-50 rounded-2xl outline-none font-black text-center text-sm uppercase shadow-inner"><button type="submit" class="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black uppercase text-xs tracking-widest">Guardar Alta</button></form></div><div class="bg-white rounded-[2.5rem] border overflow-hidden"><table class="min-w-full divide-y font-bold text-center"><thead class="bg-gray-50 text-[10px] text-gray-400 font-black text-center"><tr><th class="px-8 py-5 text-left">Nombre</th><th class="px-8 py-5 text-center">Área</th><th class="px-8 py-5 text-right">Baja</th></tr></thead><tbody id="employeeList" class="divide-y text-sm text-center"></tbody></table></div></div>
@@ -226,25 +226,86 @@
                 e.target.reset(); notify("Éxito", "Asistencia guardada.");
             };
 
+            const updatePreview = () => {
+                const type = document.getElementById('deductionType')?.value;
+                const startStr = document.getElementById('deductionStartDate')?.value;
+                const amt = parseFloat(document.getElementById('hoursToDeduct')?.value) || 0;
+                const lbl = document.getElementById('labelDeductionAmt');
+                const previewBox = document.getElementById('datePreviewBox');
+                const previewText = document.getElementById('datePreviewText');
+                if(!lbl || !previewBox || !previewText) return;
+
+                const isDays = ['vacation', 'days_discount', 'justified'].includes(type);
+                lbl.textContent = isDays ? 'Cantidad (Días):' : 'Cantidad (Horas):';
+                document.getElementById('hoursToDeduct').step = isDays ? "1" : "0.5";
+
+                if (isDays && amt > 0 && startStr) {
+                    let currentDate = new Date(startStr + "T12:00:00");
+                    let daysAdded = 0;
+                    const includedDates = [];
+                    while(daysAdded < amt) {
+                        if (currentDate.getDay() !== 0 && currentDate.getDay() !== 6) { // Salta fines de semana
+                            includedDates.push(currentDate.toISOString().split('T')[0]);
+                            daysAdded++;
+                        }
+                        currentDate.setDate(currentDate.getDate() + 1);
+                    }
+                    previewBox.classList.remove('hidden');
+                    if(amt === 1) {
+                        previewText.textContent = `Se aplicará solo para el: ${includedDates[0]} (1 Día)`;
+                    } else {
+                        previewText.textContent = `Cubrirá del ${includedDates[0]} al ${includedDates[includedDates.length-1]} (${amt} días efectivos sin fin de semana)`;
+                    }
+                } else {
+                    previewBox.classList.add('hidden');
+                }
+            };
+            
+            const dType = document.getElementById('deductionType');
+            const dStart = document.getElementById('deductionStartDate');
+            const dAmt = document.getElementById('hoursToDeduct');
+            if(dType) dType.addEventListener('change', updatePreview);
+            if(dStart) dStart.addEventListener('change', updatePreview);
+            if(dAmt) dAmt.addEventListener('input', updatePreview);
+
             const formDeduction = document.getElementById('deductionForm');
             if(formDeduction) formDeduction.onsubmit = async (e) => {
                 e.preventDefault();
                 const empId = document.getElementById('deductionEmployee').value;
                 const type = document.getElementById('deductionType').value;
-                const startDate = document.getElementById('deductionStartDate').value;
-                const endDate = document.getElementById('deductionEndDate').value;
-                let val = parseFloat(document.getElementById('hoursToDeduct').value) || 0;
+                const startDateStr = document.getElementById('deductionStartDate').value;
+                const val = parseFloat(document.getElementById('hoursToDeduct').value) || 0;
                 
-                if (type === 'days_discount' && val === 0) val = 8;
-                if ((type === 'hours_discount' || type === 'medical_discount') && val === 0) {
-                    return notify("Atención", "Debes ingresar las horas a descontar.");
-                }
+                if (val <= 0) return notify("Atención", "Debes ingresar una cantidad válida.");
 
-                await addDoc(getColPath('deductions'), { empId, type, startDate, endDate, value: val });
-                e.target.reset(); 
-                document.getElementById('deductionStartDate').value = new Date().toISOString().split('T')[0];
-                document.getElementById('deductionEndDate').value = new Date().toISOString().split('T')[0];
-                notify("Guardado", "Ausencia/Permiso registrado en la nube.");
+                const isDays = ['vacation', 'days_discount', 'justified'].includes(type);
+                document.getElementById('cloudLoading').classList.remove('hidden');
+
+                try {
+                    if (isDays) {
+                        let currentDate = new Date(startDateStr + "T12:00:00");
+                        let daysAdded = 0;
+                        while(daysAdded < val) {
+                            if (currentDate.getDay() !== 0 && currentDate.getDay() !== 6) {
+                                const dStr = currentDate.toISOString().split('T')[0];
+                                let dVal = (type === 'days_discount') ? 8 : (type === 'vacation' ? 1 : 0);
+                                await addDoc(getColPath('deductions'), { empId, type, startDate: dStr, endDate: dStr, value: dVal });
+                                daysAdded++;
+                            }
+                            currentDate.setDate(currentDate.getDate() + 1);
+                        }
+                    } else {
+                        await addDoc(getColPath('deductions'), { empId, type, startDate: startDateStr, endDate: startDateStr, value: val });
+                    }
+                    e.target.reset(); 
+                    document.getElementById('deductionStartDate').value = new Date().toISOString().split('T')[0];
+                    updatePreview();
+                    notify("Guardado", "Registro(s) aplicado(s) en la nube.");
+                } catch(err) {
+                    notify("Error", "Error de conexión con la nube.");
+                } finally {
+                    document.getElementById('cloudLoading').classList.add('hidden');
+                }
             };
 
             const btnReport = document.getElementById('generateReportBtn');
@@ -451,11 +512,9 @@
             const t = new Date().toISOString().split('T')[0];
             const entryDateInput = document.getElementById('entryDate');
             const dedStartInput = document.getElementById('deductionStartDate');
-            const dedEndInput = document.getElementById('deductionEndDate');
             
             if (entryDateInput) entryDateInput.value = t;
             if (dedStartInput) dedStartInput.value = t;
-            if (dedEndInput) dedEndInput.value = t;
         }
 
         if (document.readyState === 'loading') {
