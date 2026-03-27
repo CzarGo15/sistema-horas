@@ -233,9 +233,18 @@
                 const type = document.getElementById('deductionType').value;
                 const startDate = document.getElementById('deductionStartDate').value;
                 const endDate = document.getElementById('deductionEndDate').value;
-                const val = document.getElementById('hoursToDeduct').value || 0;
-                await addDoc(getColPath('deductions'), { empId, type, startDate, endDate, value: parseFloat(val) });
-                e.target.reset(); notify("Guardado", "Ausencia/Permiso registrado en la nube.");
+                let val = parseFloat(document.getElementById('hoursToDeduct').value) || 0;
+                
+                if (type === 'days_discount' && val === 0) val = 8;
+                if ((type === 'hours_discount' || type === 'medical_discount') && val === 0) {
+                    return notify("Atención", "Debes ingresar las horas a descontar.");
+                }
+
+                await addDoc(getColPath('deductions'), { empId, type, startDate, endDate, value: val });
+                e.target.reset(); 
+                document.getElementById('deductionStartDate').value = new Date().toISOString().split('T')[0];
+                document.getElementById('deductionEndDate').value = new Date().toISOString().split('T')[0];
+                notify("Guardado", "Ausencia/Permiso registrado en la nube.");
             };
 
             const btnReport = document.getElementById('generateReportBtn');
@@ -243,22 +252,41 @@
                 const empId = document.getElementById('reportEmployee').value, per = document.getElementById('reportMonthYear').value;
                 document.getElementById('reportOutput').classList.remove('hidden');
                 document.getElementById('downloadReportBtn').classList.remove('hidden');
-                const filt = timeRecords.filter(r => (empId === 'all' || r.empId === empId) && (per === 'all' || r.date.startsWith(per))).sort((a,b) => b.date.localeCompare(a.date));
+                
+                const filtTime = timeRecords.filter(r => (empId === 'all' || r.empId === empId) && (per === 'all' || r.date.startsWith(per))).map(r => ({...r, docType: 'time'}));
+                const filtDed = deductions.filter(d => (empId === 'all' || d.empId === empId) && (per === 'all' || d.startDate.startsWith(per))).map(d => ({...d, docType: 'deduction', date: d.startDate}));
+                const filt = [...filtTime, ...filtDed].sort((a,b) => b.date.localeCompare(a.date));
+                
                 const table = document.getElementById('reportHistoryTable'); if(table) table.innerHTML = '';
                 filt.forEach(r => {
-                    const badge = (r.dayType !== 'normal') ? `<span class="text-orange-500 font-black">[${r.dayType.toUpperCase()}]</span>` : `${r.cin} - ${r.cout}`;
-                    table.innerHTML += `<tr><td class="px-4 py-3 text-left font-black text-gray-400 font-mono">${r.date}</td><td class="px-4 py-3 text-center font-bold text-gray-600 uppercase text-[9px] tracking-tighter">${badge}</td><td class="px-4 py-3 text-center text-indigo-700 font-black">${(parseFloat(r.worked)||0).toFixed(1)}h</td><td class="px-4 py-3 text-center text-blue-600 font-black">+${(parseFloat(r.overtime)||0).toFixed(2)}h</td><td class="px-4 py-3 text-right"><button onclick="window.delRec('${r.id}')" class="text-red-400 font-black">✕</button></td></tr>`;
+                    if (r.docType === 'time') {
+                        const badge = (r.dayType !== 'normal') ? `<span class="text-orange-500 font-black">[${r.dayType.toUpperCase()}]</span>` : `${r.cin} - ${r.cout}`;
+                        table.innerHTML += `<tr><td class="px-4 py-3 text-left font-black text-gray-400 font-mono">${r.date}</td><td class="px-4 py-3 text-center font-bold text-gray-600 uppercase text-[9px] tracking-tighter">${badge}</td><td class="px-4 py-3 text-center text-indigo-700 font-black">${(parseFloat(r.worked)||0).toFixed(1)}h</td><td class="px-4 py-3 text-center text-blue-600 font-black">+${(parseFloat(r.overtime)||0).toFixed(2)}h</td><td class="px-4 py-3 text-right"><button onclick="window.delRec('${r.id}')" class="text-red-400 font-black">✕</button></td></tr>`;
+                    } else {
+                        const typeNames = { hours_discount: 'PERMISO HR', medical_discount: 'MÉDICO', days_discount: 'FALTA DÍA', vacation: 'VACACIONES', justified: 'JUSTIFICADO' };
+                        const tName = typeNames[r.type] || r.type;
+                        const valStr = r.type === 'vacation' ? '1 Día' : `-${(parseFloat(r.value)||0).toFixed(2)}h`;
+                        table.innerHTML += `<tr><td class="px-4 py-3 text-left font-black text-gray-400 font-mono bg-orange-50/50">${r.date}</td><td class="px-4 py-3 text-center font-bold text-orange-600 uppercase text-[9px] tracking-tighter bg-orange-50/50">[${tName}]</td><td class="px-4 py-3 text-center text-gray-400 font-black bg-orange-50/50">-</td><td class="px-4 py-3 text-center text-red-600 font-black bg-orange-50/50">${valStr}</td><td class="px-4 py-3 text-right bg-orange-50/50"><button onclick="window.delDed('${r.id}')" class="text-red-400 font-black">✕</button></td></tr>`;
+                    }
                 });
             };
 
             const btnDownload = document.getElementById('downloadReportBtn');
             if(btnDownload) btnDownload.onclick = () => {
                 const empId = document.getElementById('reportEmployee').value, per = document.getElementById('reportMonthYear').value;
-                const filt = timeRecords.filter(r => (empId === 'all' || r.empId === empId) && (per === 'all' || r.date.startsWith(per))).sort((a,b) => b.date.localeCompare(a.date));
+                const filtTime = timeRecords.filter(r => (empId === 'all' || r.empId === empId) && (per === 'all' || r.date.startsWith(per))).map(r => ({...r, docType: 'time'}));
+                const filtDed = deductions.filter(d => (empId === 'all' || d.empId === empId) && (per === 'all' || d.startDate.startsWith(per))).map(d => ({...d, docType: 'deduction', date: d.startDate}));
+                const filt = [...filtTime, ...filtDed].sort((a,b) => b.date.localeCompare(a.date));
+                
                 if(filt.length === 0) return notify("Vacío", "No hay datos filtrados para descargar.");
                 const csvData = filt.map(r => {
                     const emp = employees.find(e => e.id === r.empId);
-                    return { "Empleado": emp ? emp.name : "DESCONOCIDO", "Fecha": r.date, "Tipo": r.dayType.toUpperCase(), "Entrada": r.cin, "Salida": r.cout, "Efectivas": parseFloat(r.worked||0).toFixed(2), "Extra": parseFloat(r.overtime||0).toFixed(2) };
+                    if (r.docType === 'time') {
+                        return { "Empleado": emp ? emp.name : "DESCONOCIDO", "Fecha": r.date, "Tipo": r.dayType.toUpperCase(), "Entrada": r.cin, "Salida": r.cout, "Efectivas": parseFloat(r.worked||0).toFixed(2), "Extra_o_Descuento": parseFloat(r.overtime||0).toFixed(2) };
+                    } else {
+                        const valStr = r.type === 'vacation' ? '-1 Día' : `-${parseFloat(r.value||0).toFixed(2)}`;
+                        return { "Empleado": emp ? emp.name : "DESCONOCIDO", "Fecha": r.date, "Tipo": `AUSENCIA: ${r.type.toUpperCase()}`, "Entrada": "-", "Salida": "-", "Efectivas": "0", "Extra_o_Descuento": valStr };
+                    }
                 });
                 const csv = Papa.unparse(csvData);
                 const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csv], {type: "text/csv;charset=utf-8;"});
@@ -398,6 +426,12 @@
         window.delRec = async (id) => { 
             await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'timeRecords', id)); 
             notify("Eliminado", "El registro ha sido borrado.");
+            setTimeout(() => { if(!document.getElementById('reportOutput').classList.contains('hidden')) document.getElementById('generateReportBtn').click(); }, 300);
+        };
+        window.delDed = async (id) => { 
+            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'deductions', id)); 
+            notify("Eliminado", "El permiso/ausencia ha sido borrado.");
+            setTimeout(() => { if(!document.getElementById('reportOutput').classList.contains('hidden')) document.getElementById('generateReportBtn').click(); }, 300);
         };
 
         function notify(t, m) { 
