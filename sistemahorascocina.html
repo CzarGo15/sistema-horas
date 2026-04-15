@@ -99,7 +99,7 @@
             <div id="tab-reports" class="section-content space-y-8 text-center"><h2 class="text-3xl font-black italic text-center uppercase tracking-tighter">Historial Nube</h2><div class="bg-white p-6 rounded-[2.5rem] border grid grid-cols-4 gap-4 font-bold text-center uppercase"><div><label class="text-[10px] text-gray-400 mb-1 block uppercase">Trabajador</label><select id="reportEmployee" class="w-full p-3 bg-gray-50 rounded-xl font-bold uppercase text-center shadow-inner"></select></div><div><label class="text-[10px] text-gray-400 mb-1 block uppercase text-center">Periodo</label><select id="reportMonthYear" class="w-full p-3 bg-gray-50 rounded-xl font-bold uppercase text-center shadow-inner"></select></div><div class="flex items-end"><button id="generateReportBtn" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-black uppercase text-xs shadow-lg tracking-widest">Filtrar</button></div><div class="flex items-end"><button id="downloadReportBtn" class="w-full bg-green-600 text-white py-3 rounded-xl font-black uppercase text-xs shadow-lg tracking-widest hidden">Descargar CSV</button></div></div><div id="reportOutput" class="hidden bg-white rounded-3xl border overflow-hidden font-black"><table class="min-w-full divide-y text-center uppercase"><thead class="bg-gray-50 text-[10px] font-black"><tr><th class="px-4 py-4 text-left uppercase">Fecha</th><th class="px-4 py-4 text-center">Horario</th><th class="px-4 py-4 text-center">Efectivas</th><th class="px-4 py-4 text-center">Extras</th><th class="px-4 py-4 text-right">Borrar</th></tr></thead><tbody id="reportHistoryTable" class="divide-y text-[10px] font-bold text-center uppercase"></tbody></table></div></div>
 
             <!-- BASE DE DATOS -->
-            <div id="tab-data" class="section-content space-y-10 text-center uppercase"><h2 class="text-3xl font-black text-indigo-700 text-center uppercase italic">Administración Cloud</h2><div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-center uppercase"> <div class="bg-green-700 text-white p-10 rounded-[3rem] shadow-2xl flex flex-col justify-between text-center uppercase"><div><h3 class="text-2xl font-black mb-3 italic tracking-tighter uppercase">Importar JSON</h3><p class="text-[10px] opacity-80 mb-6 font-medium uppercase leading-relaxed">Sincroniza tus registros locales con el servidor de Google.</p></div><form id="importJsonForm" class="space-y-4"><input type="file" id="jsonFile" accept=".json" class="block w-full text-xs text-white/50 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 font-bold uppercase"><button type="submit" class="w-full bg-white text-green-800 py-5 rounded-2xl font-black uppercase text-xs shadow-2xl tracking-widest">Ejecutar</button></form></div><div class="bg-indigo-700 text-white p-10 rounded-[3rem] shadow-2xl flex flex-col justify-between text-center uppercase"><div><h3 class="text-2xl font-black mb-3 italic uppercase tracking-tighter uppercase">Backup Backup</h3><p class="text-[10px] opacity-80 mb-6 font-medium uppercase leading-relaxed">Descarga una copia de seguridad total en tiempo real.</p></div><button id="exportDataBtn" class="w-full bg-white text-indigo-800 py-5 rounded-2xl font-black uppercase text-xs shadow-2xl tracking-widest">Descargar JSON</button></div></div></div>
+            <div id="tab-data" class="section-content space-y-10 text-center uppercase"><h2 class="text-3xl font-black text-indigo-700 text-center uppercase italic">Administración Cloud</h2><div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center uppercase"> <div class="bg-green-700 text-white p-10 rounded-[3rem] shadow-2xl flex flex-col justify-between text-center uppercase"><div><h3 class="text-2xl font-black mb-3 italic tracking-tighter uppercase">Importar JSON</h3><p class="text-[10px] opacity-80 mb-6 font-medium uppercase leading-relaxed">Sincroniza tus registros locales con el servidor de Google.</p></div><form id="importJsonForm" class="space-y-4"><input type="file" id="jsonFile" accept=".json" class="block w-full text-xs text-white/50 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 font-bold uppercase"><button type="submit" class="w-full bg-white text-green-800 py-5 rounded-2xl font-black uppercase text-xs shadow-2xl tracking-widest">Ejecutar</button></form></div><div class="bg-indigo-700 text-white p-10 rounded-[3rem] shadow-2xl flex flex-col justify-between text-center uppercase"><div><h3 class="text-2xl font-black mb-3 italic uppercase tracking-tighter uppercase">Backup Backup</h3><p class="text-[10px] opacity-80 mb-6 font-medium uppercase leading-relaxed">Descarga una copia de seguridad total en tiempo real.</p></div><button id="exportDataBtn" class="w-full bg-white text-indigo-800 py-5 rounded-2xl font-black uppercase text-xs shadow-2xl tracking-widest">Descargar JSON</button></div><div class="bg-red-700 text-white p-10 rounded-[3rem] shadow-2xl flex flex-col justify-between text-center uppercase"><div><h3 class="text-2xl font-black mb-3 italic uppercase tracking-tighter uppercase">Peligro: Reset</h3><p class="text-[10px] opacity-80 mb-6 font-medium uppercase leading-relaxed">Elimina TODA la base de datos para empezar de cero.</p></div><form id="wipeDataForm" class="space-y-4"><input type="text" id="wipeConfirmText" required placeholder="Escribe: ELIMINAR TODO" class="w-full p-3 bg-red-800 text-white rounded-xl border-none outline-none text-center font-black uppercase placeholder-red-400 text-[10px] shadow-inner"><button type="submit" class="w-full bg-white text-red-800 py-5 rounded-2xl font-black uppercase text-xs shadow-2xl tracking-widest">Borrar Nube</button></form></div></div></div>
 
         </main>
     </div>
@@ -377,6 +377,32 @@
                     } catch(err) { notify("Error", "Archivo no válido."); }
                 };
                 r.readAsText(file);
+            };
+
+            const formWipe = document.getElementById('wipeDataForm');
+            if(formWipe) formWipe.onsubmit = async (e) => {
+                e.preventDefault();
+                const confText = document.getElementById('wipeConfirmText').value.trim().toUpperCase();
+                if(confText !== "ELIMINAR TODO") {
+                    return notify("Error", "Debes escribir exactamente 'ELIMINAR TODO' para confirmar.");
+                }
+                
+                document.getElementById('cloudLoading').classList.remove('hidden');
+                document.getElementById('loadingText').textContent = "Borrando Base de Datos...";
+                
+                try {
+                    for (let emp of employees) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'employees', emp.id));
+                    for (let rec of timeRecords) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'timeRecords', rec.id));
+                    for (let ded of deductions) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'deductions', ded.id));
+                    
+                    e.target.reset();
+                    notify("Completado", "La base de datos está completamente vacía.");
+                } catch(err) {
+                    notify("Error", "Ocurrió un error al intentar borrar.");
+                } finally {
+                    document.getElementById('cloudLoading').classList.add('hidden');
+                    document.getElementById('loadingText').textContent = "Sincronizando Cloud...";
+                }
             };
 
             const closeModal = document.getElementById('closeModalBtn');
